@@ -6,7 +6,8 @@ window.onload = () => {
         game = new Game(0);
         // Getting memory then setting it on live memory
         var retrieveData = localStorage.getItem('saveData');
-        var getSave = JSON.parse(retrieveData);     
+        var getSave = JSON.parse(retrieveData);
+        var clickAuto= (game.autoclick.bps) + (game.autoclick2.bps);     
         game.score = getSave.Score;
         game.multiplier.price = getSave.MultiPrice;
         game.multiplier.level = getSave.MultiLevel;
@@ -14,9 +15,13 @@ window.onload = () => {
         game.autoclick.price = getSave.AutoPrice;
         game.autoclick.level = getSave.AutoLevel;
         game.autoclick.bps = getSave.AutoBpS;
+        game.autoclick2.price = getSave.Auto2Price;
+        game.autoclick2.level = getSave.Auto2Level;
+        game.autoclick2.bps = getSave.Auto2BpS;
         game.multiplier.updateAffichageMultiple();
-        game.autoclick.updateAffichageAutoclick();
-        game.updateAffichageBps(game.autoclick.bps);
+        game.autoclick.updateAffichageAutoclick(game.autoBtn,game.autoclick);
+        game.autoclick2.updateAffichageAutoclick(game.autoBtn2,game.autoclick2);
+        game.updateAffichageBps(clickAuto);
 
     } else {
         // If nothing in memory, start game with score= 0
@@ -31,23 +36,26 @@ window.onload = () => {
         game.checkPrice();
         game.updateAffichageScore(game.score);
         game.multiplier.updateAffichageMultiple();
-        game.autoclick.updateAffichageAutoclick();
+        game.autoclick.updateAffichageAutoclick(game.autoBtn,game.autoclick);
+        game.autoclick2.updateAffichageAutoclick(game.autoBtn2,game.autoclick2);
         
         // Local data automatic save / 15 seconds interval
 
         setInterval(()=>{
             saveGameData();
             game.multiplier.updateAffichageMultiple();
-            game.autoclick.updateAffichageAutoclick();
+            game.autoclick.updateAffichageAutoclick(game.autoBtn,game.autoclick);
+            game.autoclick2.updateAffichageAutoclick(game.autoBtn2,game.autoclick2);
         }, 15000);
         
         // Increase score by bps every second
         setInterval(()=>{
-            game.score+=game.autoclick.bps
+            game.score+=((game.autoclick.bps) + (game.autoclick2.bps));
             game.checkPrice();
             game.updateAffichageScore(game.score);
             game.multiplier.updateAffichageMultiple();
-            game.autoclick.updateAffichageAutoclick();
+            game.autoclick.updateAffichageAutoclick(game.autoBtn,game.autoclick);
+            game.autoclick2.updateAffichageAutoclick(game.autoBtn2,game.autoclick2);
         }, 1000);
         
         // Event Listener for click on reset button
@@ -76,15 +84,30 @@ window.onload = () => {
                 game.updateAffichageScore(game.score);
             }
         })
+
         // Create event listener on autoclick button
         autoObject = game.autoclick
         game.monkey.addEventListener("click",() => {
             if (game.isBuyable(game.score,autoObject.price) == true) { 
                 game.score = game.payForUpgrade(game.score,autoObject.price)
                 autoObject.autoFlow();
+                autoObject.updateAffichageAutoclick(game.autoBtn,game.autoclick)
                 game.checkPrice();
                 game.updateAffichageScore(game.score);
                 game.updateAffichageBps(autoObject.bps);
+            }
+        })
+
+        // Create Event listener on autoclick button 2:
+        autoObject2 = game.autoclick2
+        game.autoBtn2.addEventListener("click",() => {  
+            if (game.isBuyable(game.score,autoObject2.price) == true) { 
+                game.score = game.payForUpgrade(game.score,autoObject2.price)
+                autoObject2.autoFlow();
+                autoObject2.updateAffichageAutoclick(game.boost1,game.autoclick2)
+                game.checkPrice();
+                game.updateAffichageScore(game.score);
+                game.updateAffichageBps(autoObject2.bps);
             }
         })
 
@@ -114,12 +137,14 @@ window.onload = () => {
         this.grappe = document.querySelector('.bananaGrappe')
         this.multBtn = document.querySelector('#hMultiplier')
         this.monkey = document.querySelector('.monkey');
-        this.autoBtn = document.querySelector('#hAutoclick')
-        this.bonusBtn = document.querySelector('#hBonus')
-        this.resetBtn = document.querySelector('#hReset')
+        this.autoBtn = document.querySelector('#hAutoclick');
+        this.autoBtn2 = document.querySelector('#hAutoclick2');
+        this.bonusBtn = document.querySelector('#hBonus');
+        this.resetBtn = document.querySelector('#hReset');
         this.score = score
         this.multiplier = new Multiple(50,1,1)
         this.autoclick = new Autoclick(20,1,0)
+        this.autoclick2 = new Autoclick(200,1,0)
         this.bonus = new Bonus()
         // Check if possible buy (score > 0)
         // return false if too expensive, true else
@@ -160,7 +185,8 @@ window.onload = () => {
         // Cycle through each upgrade object and launch the btn_enabler_disabler method
         this.checkPrice = function(){
             game.buttonEnableDisable(game.score,game.multiplier.price,game.grappe)
-            game.buttonEnableDisable(game.score,game.autoclick.price,game.monkey) 
+            game.buttonEnableDisable(game.score,game.autoclick.price,game.monkey)
+            game.buttonEnableDisable(game.score,game.autoclick2.price,game.autoBtn2)  
         }
     }
 
@@ -190,11 +216,10 @@ window.onload = () => {
             this.price = Math.round(this.price+(this.price/3)+(this.price%2));
             this.level = this.level+1;
             this.bps = this.bps+1;
-            this.updateAffichageAutoclick()
         }
         // Update autoclick display on index.html
-        this.updateAffichageAutoclick = function () {
-            game.autoBtn.innerHTML = game.autoclick.bps.toFixed(0)+' BPS' + ' | ' + game.autoclick.price.toFixed(0);
+        this.updateAffichageAutoclick = function (btnNumber,autoclickNumber) {
+            btnNumber.innerHTML = autoclickNumber.bps.toFixed(0)+' bananas per second' + ' <br/> ' + autoclickNumber.price.toFixed(0);
         }
     }
 
@@ -232,8 +257,12 @@ window.onload = () => {
             'MultiIncrease':game.multiplier.increase,
             'AutoPrice':game.autoclick.price,
             'AutoLevel':game.autoclick.level,
-            'AutoBpS':game.autoclick.bps
-        }
+            'AutoBpS':game.autoclick.bps,
+            'Auto2Price':game.autoclick2.price,
+    	    'Auto2Level':game.autoclick2.level,
+            'Auto2BpS':game.autoclick2.bps,
+	}
+
         // -> Storage
         localStorage.setItem('saveData', JSON.stringify(saveData));
         console.log(saveData.Score);
